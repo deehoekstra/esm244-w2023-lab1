@@ -74,9 +74,29 @@ blackwood_acacia_sf <- blackwood_acacia %>%
 
 st_crs(blackwood_acacia_sf) <- 4326 #basically a coordinate reference system, basic latitude and longitude
 
+ggplot(data = blackwood_acacia_sf) + geom_sf(color = 'darkgreen') + theme_minimal()
+```
+### Read in SF streets data (sf in this case at the end stands for simple features)
+```{r}
+sf_map_sf <- read_sf(here('data', 'sf_map', 'tl_2017_06075_roads.shp')) %>% 
+  st_transform(4326) 
 
+# st_crs(sf_map_sf) see what coordinate system you are working with and itf you have to change it
 ```
 
+```{r}
+ggplot() + 
+  geom_sf(data = sf_map_sf, size = 0.1, color = 'darkgrey') +
+  geom_sf(data = blackwood_acacia_sf, color = 'darkgreen', size = 0.5) + theme_void() +
+  labs(title = 'Blackwood acacias in San Francisco')
+  
+```
+
+### Interactive Map
+```{r}
+tmap_mode('view')
+tm_shape(blackwood_acacia_sf) + tm_dots()
+```
 
 
 
