@@ -7,24 +7,81 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(sf)
+library(tmap)
+library(here)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+### Read in the data
+```{r}
+sf_trees <- read.csv(here("data", "sf_trees", "sf_trees.csv"))
 ```
 
-## Including Plots
+### plot the top 5 legal status
+```{r}
+top_5_status <- sf_trees %>% 
+  group_by(legal_status) %>%  
+  summarize(tree_count = n()) %>% 
+  slice_max(tree_count, n = 5) %>%
+  arrange(-tree_count)
+  
+tree_plot <- ggplot(data = top_5_status, aes(x = fct_reorder(legal_status, tree_count), 
+                                y = tree_count)) + 
+  geom_col() +
+  labs(y = 'Tree count', x = 'Legal Status') +
+  coord_flip() +
+  theme_minimal()
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+tree_plot
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Keep obs where legal status is "Permitted Site" and caretaker is "MTA"
+```{r}
+permitted_mia <- sf_trees %>% 
+  filter(legal_status == "Permitted Site" & caretaker == "MTA")
+```
+
+### Keep Blackwood acacia trees, keep only legal_status, date, latitude, longitude columns
+```{r, warning=FALSE}
+blackwood_acacia <- sf_trees %>% 
+  filter(str_detect(species, "Blackwood Acacia")) %>% 
+  select(legal_status, date, latitude, longitude)
+
+#str_detect for if the name like this is next to another scientific name
+### now make a plot
+
+ggplot(data = blackwood_acacia, aes(x = longitude, y = latitude)) + geom_point()
+```
+
+### use tidyr:: separate() to separate one column into multiple (in this case, separate common and scientific name) and use tidyr :: unite() to bring them back together
+```{r, warning=FALSE}
+sf_tress_sep <- sf_trees %>% separate(species, into = c('spp_scientific', 'spp_common'), sep = " :: ")
+
+sf_trees_unite <- sf_trees %>% 
+  unite("id_status", tree_id:species, sep = '_NEW_')
+```
+
+### Make some actual maps!
+```{r}
+blackwood_acacia_sf <- blackwood_acacia %>% 
+  drop_na(longitude, latitude) %>% 
+  st_as_sf(coords = c('longitude', 'latitude'))
+
+# now you have coordinates as points and can plot them using simple features tool
+
+st_crs(blackwood_acacia_sf) <- 4326 #basically a coordinate reference system, basic latitude and longitude
+
+
+```
+
+
+
+
+
+
+
+
+
